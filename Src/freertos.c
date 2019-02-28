@@ -55,8 +55,8 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */     
-
+/* USER CODE BEGIN Includes */
+#include "hal_uart_printf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -76,13 +76,26 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+osThreadId	poolTaskHandle1;
+osThreadId	poolTaskHandle2;
 
+typedef struct
+{
+	uint32_t	length;
+	uint32_t	width;
+	uint32_t	height;
+	uint32_t	weight;
+} properties_t;
+
+properties_t	*properties;
+osPoolId		poolHandle;
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-   
+void PoolTask1( void const * argument );
+void PoolTask2( void const * argument );
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
@@ -97,7 +110,12 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-       
+	osPoolDef( myMemoryPool, 10, properties_t );
+	poolHandle = osPoolCreate( osPool(myMemoryPool) );
+	if( poolHandle != NULL )
+	{
+		properties	= (properties_t *)osPoolAlloc( poolHandle );
+	}
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -119,6 +137,11 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  osThreadDef( task1, PoolTask1, osPriorityNormal, 0, 128 );
+  poolTaskHandle1	= osThreadCreate( osThread( task1 ), (void *)properties );
+
+  osThreadDef( task2, PoolTask2, osPriorityNormal, 0, 128 );
+  poolTaskHandle2	= osThreadCreate( osThread( task2 ), (void *)properties );
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -149,7 +172,52 @@ void StartDefaultTask(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-     
+void PoolTask1( void const * argument )
+{
+	properties_t	*arg_properties	= (properties_t *)argument;
+
+	arg_properties[0].height	= 0;
+	arg_properties[0].length	= 10;
+	arg_properties[0].weight	= 100;
+	arg_properties[0].width		= 1000;
+
+	for(;;)
+	{
+		arg_properties[0].height++;
+		arg_properties[0].length++;
+		arg_properties[0].weight++;
+		arg_properties[0].width++;
+
+		printf( "PoolTask1 Reading : (%d, %d, %d, %d) \r\n",
+				arg_properties[0].height,
+				arg_properties[0].length,
+				arg_properties[0].weight,
+				arg_properties[0].width );
+
+		osDelay( 500 );
+	}
+}
+
+void PoolTask2( void const * argument )
+{
+	properties_t	*arg_properties	= (properties_t *)argument;
+
+	for(;;)
+	{
+		arg_properties[0].height++;
+		arg_properties[0].length++;
+		arg_properties[0].weight++;
+		arg_properties[0].width++;
+
+		printf( "PoolTask2 Reading : (%d, %d, %d, %d) \r\n",
+				arg_properties[0].height,
+				arg_properties[0].length,
+				arg_properties[0].weight,
+				arg_properties[0].width );
+
+		osDelay( 800 );
+	}
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
